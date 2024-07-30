@@ -16,6 +16,8 @@ services:
       - ./:/var/www
     networks:
       - lahmi
+    ports:
+      - '${REVERB_PORT:-8080}:8080'
 
   db:
     image: mysql:5.7
