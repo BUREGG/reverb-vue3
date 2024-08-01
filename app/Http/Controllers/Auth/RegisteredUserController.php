@@ -45,6 +45,6 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
 
-        return redirect('dashboard');
+        return redirect('wiadomosci');
     }
 }
