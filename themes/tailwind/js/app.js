@@ -11,6 +11,8 @@ import "./bootstrap";
  */
 // import { createApp } from "vue";
 import { createApp } from "vue/dist/vue.esm-bundler.js";
+import Toast from 'vue-toastification';
+import 'vue-toastification/dist/index.css';
 
 const app = createApp({});
 
@@ -36,3 +38,4 @@ app.component("chat-component", ChatComponent);
  * or customize the JavaScript scaffolding to fit your unique needs.
  */
 app.mount("#app");
+app.use(Toast, options);
