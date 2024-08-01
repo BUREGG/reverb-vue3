@@ -1,8 +1,9 @@
 <?php
 
 use App\Events\MessageSent;
-use App\Models\ChatMessage;
+use App\Models\Message;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -22,27 +23,32 @@ Route::get('/chat/{friend}', function (User $friend) {
 })->middleware(['auth'])->name('chat');
 
 Route::get('/messages/{friend}', function (User $friend) {
-    return ChatMessage::query()
-        ->where(function ($query) use ($friend) {
-            $query->where('sender_id', auth()->id())
-                ->where('receiver_id', $friend->id);
+    $userId = auth()->id();
+    
+    return Message::query()
+        ->where(function ($query) use ($userId, $friend) {
+            $query->where('sender_id', $userId)
+                  ->where('receiver_id', $friend->id);
         })
-        ->orWhere(function ($query) use ($friend) {
+        ->orWhere(function ($query) use ($userId, $friend) {
             $query->where('sender_id', $friend->id)
-                ->where('receiver_id', auth()->id());
+                  ->where('receiver_id', $userId);
         })
-       ->with(['sender', 'receiver'])
-       ->orderBy('id', 'asc')
-       ->get();
+        ->with(['sender', 'receiver'])
+        ->orderBy('id', 'asc')
+        ->get();
 })->middleware(['auth']);
 
-Route::post('/messages/{friend}', function (User $friend) {
-    $message = ChatMessage::create([
-        'sender_id' => auth()->id(),
-        'receiver_id' => $friend->id,
-        'text' => request()->input('message')
+Route::post('/messages/{friend}', function (Request $request, User $friend) {
+    $validatedData = $request->validate([
+        'message' => 'required|string|max:255',
     ]);
 
+    $message = Message::create([
+        'sender_id' => auth()->id(),
+        'receiver_id' => $friend->id,
+        'text' => $validatedData['message']
+    ]);
     broadcast(new MessageSent($message));
 
     return  $message;
