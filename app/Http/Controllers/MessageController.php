@@ -28,20 +28,31 @@ class MessageController extends Controller
     }
 
     public function sendMessage(User $friend, Request $request)
-    {
-        $validatedData = $request->validate([
-            'message' => 'required|string|max:255',
-        ]);
-    
-        $message = Message::create([
-            'sender_id' => auth()->id(),
-            'receiver_id' => $friend->id,
-            'text' => $validatedData['message']
-        ]);
-        broadcast(new MessageSent($message));
-    
-        return  $message;
+{
+    $validatedData = $request->validate([
+        'message' => 'nullable|string|max:255',
+        'attachment' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048'
+    ]);
+
+    $messageData = [
+        'sender_id' => auth()->id(),
+        'receiver_id' => $friend->id,
+        'text' => $validatedData['message'] ?? '',
+    ];
+
+    if ($request->hasFile('attachment')) {
+        $file = $request->file('attachment');
+        $path = $file->store('attachments', 'public');
+        $messageData['attachment'] = $path;
+        $messageData['attachment_name'] = $file->getClientOriginalName();
     }
+
+    $message = Message::create($messageData);
+    broadcast(new MessageSent($message));
+
+    return $message;
+}
+
 
     public function showChat(User $friend)
     {

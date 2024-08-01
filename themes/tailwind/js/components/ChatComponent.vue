@@ -12,9 +12,15 @@
                         class="p-2 ml-auto text-white bg-blue-500 rounded-lg"
                     >
                         {{ message.text }}
+                        <a v-if="message.attachment" :href="`/storage/${message.attachment}`" target="_blank" download>
+                            {{ message.attachment_name }}
+                        </a>
                     </div>
                     <div v-else class="p-2 mr-auto bg-gray-200 rounded-lg">
                         {{ message.text }}
+                        <a v-if="message.attachment" :href="`/storage/${message.attachment}`" target="_blank" download>
+                            {{ message.attachment_name }}
+                        </a>
                     </div>
                 </div>
             </div>
@@ -28,8 +34,15 @@
                 placeholder="Type a message..."
                 class="flex-1 px-2 py-1 border rounded-lg"
             />
+            <input
+                type="file"
+                ref="fileInput"
+                @change="handleFileUpload"
+                class="ml-2"
+            />
             <button
                 @click="sendMessage"
+                :disabled="!canSendMessage"
                 class="px-4 py-1 ml-2 text-white bg-blue-500 rounded-lg"
             >
                 Send
@@ -43,7 +56,7 @@
 
 <script setup>
 import axios from "axios";
-import { nextTick, onMounted, ref, watch } from "vue";
+import { nextTick, onMounted, ref, watch, computed } from "vue";
 
 const props = defineProps({
     friend: {
@@ -61,6 +74,12 @@ const newMessage = ref("");
 const messagesContainer = ref(null);
 const isFriendTyping = ref(false);
 const isFriendTypingTimer = ref(null);
+const fileInput = ref(null);
+const selectedFile = ref(null);
+
+const canSendMessage = computed(() => {
+    return newMessage.value.trim() !== "" || selectedFile.value;
+});
 
 watch(
     messages,
@@ -75,15 +94,29 @@ watch(
     { deep: true }
 );
 
+const handleFileUpload = () => {
+    selectedFile.value = fileInput.value.files[0];
+};
+
 const sendMessage = () => {
-    if (newMessage.value.trim() !== "") {
+    if (canSendMessage.value) {
+        const formData = new FormData();
+        formData.append("message", newMessage.value);
+        if (selectedFile.value) {
+            formData.append("attachment", selectedFile.value);
+        }
+
         axios
-            .post(`/messages/${props.friend.id}`, {
-                message: newMessage.value,
+            .post(`/messages/${props.friend.id}`, formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
             })
             .then((response) => {
                 messages.value.push(response.data);
                 newMessage.value = "";
+                selectedFile.value = null;
+                fileInput.value.value = "";
             });
     }
 };
